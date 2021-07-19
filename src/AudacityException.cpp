@@ -9,13 +9,12 @@
 
 ***********************************************************************/
 
-#include "Audacity.h"
+
 #include "AudacityException.h"
 
 #include <wx/atomic.h>
 
-#include "widgets/AudacityMessageBox.h"
-#include "widgets/ErrorDialog.h"
+#include "BasicUI.h"
 
 AudacityException::~AudacityException()
 {
@@ -23,8 +22,10 @@ AudacityException::~AudacityException()
 
 wxAtomicInt sOutstandingMessages {};
 
-MessageBoxException::MessageBoxException( const TranslatableString &caption_ )
-   : caption{ caption_ }
+MessageBoxException::MessageBoxException(
+   ExceptionType exceptionType_, const TranslatableString& caption_)
+    : caption { caption_ }
+    , exceptionType { exceptionType_ }
 {
    if (!caption.empty())
       wxAtomicInc( sOutstandingMessages );
@@ -42,6 +43,7 @@ MessageBoxException::MessageBoxException( const MessageBoxException& that )
    caption = that.caption;
    moved = that.moved;
    helpUrl = that.helpUrl;
+   exceptionType = that.exceptionType;
    that.moved = true;
 }
 
@@ -72,22 +74,26 @@ void MessageBoxException::DelayedHandlerAction()
       // common cause such as exhaustion of disk space so that the others
       // give the user no useful added information.
       
+      using namespace BasicUI;
       if ( wxAtomicDec( sOutstandingMessages ) == 0 ) {
-         if (ErrorHelpUrl().IsEmpty())
-         {
-            ::AudacityMessageBox(
+         if (exceptionType != ExceptionType::Internal
+             && ErrorHelpUrl().IsEmpty()) {
+            // We show BadEnvironment and BadUserAction in a similar way
+            ShowMessageBox(
                ErrorMessage(),
-               (caption.empty() ? AudacityMessageBoxCaptionStr() : caption),
-               wxICON_ERROR 
-            );
+               MessageBoxOptions{}
+                  .Caption(caption.empty() ? DefaultCaption() : caption)
+                  .IconStyle(Icon::Error) );
          }
-         else
-         {
-            ShowErrorDialog(
-               nullptr,
-               (caption.empty() ? AudacityMessageBoxCaptionStr() : caption),
+         else {
+            using namespace BasicUI;
+            auto type = exceptionType == ExceptionType::Internal
+               ? ErrorDialogType::ModalErrorReport : ErrorDialogType::ModalError;
+            ShowErrorDialog( {},
+               (caption.empty() ? DefaultCaption() : caption),
                ErrorMessage(),
-               ErrorHelpUrl());
+               ErrorHelpUrl(),
+               ErrorDialogOptions{ type } );
          }
       }
 

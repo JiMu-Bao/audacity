@@ -13,6 +13,7 @@ Paul Licameli
 
 #include <functional>
 #include <unordered_map>
+#include <vector>
 
 #include "../../AttachedVirtualFunction.h"
 #include "../../UIHandle.h"
@@ -28,8 +29,12 @@ class TrackInterval;
 class ViewInfo;
 
 //! Abstract base class for policies to manipulate a track type with the Time Shift tool
-class TrackShifter {
+class AUDACITY_DLL_API TrackShifter {
 public:
+   TrackShifter();
+   TrackShifter(const TrackShifter&) PROHIBITED;
+   TrackShifter &operator=(const TrackShifter&) PROHIBITED;
+
    virtual ~TrackShifter() = 0;
    //! There is always an associated track
    virtual Track &GetTrack() const = 0;
@@ -195,7 +200,15 @@ using MakeTrackShifter = AttachedVirtualFunction<
 
 class ViewInfo;
 
-struct ClipMoveState {
+struct AUDACITY_DLL_API ClipMoveState {
+   ClipMoveState() = default;
+
+   ClipMoveState(const ClipMoveState&) PROHIBITED;
+   ClipMoveState& operator =(const ClipMoveState&) PROHIBITED;
+
+   ClipMoveState(ClipMoveState&&) = default;
+   ClipMoveState& operator =(ClipMoveState&&) = default;
+
    using ShifterMap = std::unordered_map<Track*, std::unique_ptr<TrackShifter>>;
    
    //! Will associate a TrackShifter with each track in the list
@@ -222,7 +235,9 @@ struct ClipMoveState {
 
    std::shared_ptr<Track> mCapturedTrack;
 
+   bool initialized{ false };
    bool movingSelection {};
+   bool wasMoved{ false };
    double hSlideAmount {};
    ShifterMap shifters;
    wxInt64 snapLeft { -1 }, snapRight { -1 };
@@ -231,6 +246,8 @@ struct ClipMoveState {
 
    void clear()
    {
+      initialized = false;
+      wasMoved = false;
       movingSelection = false;
       hSlideAmount = 0;
       shifters.clear();
@@ -239,7 +256,7 @@ struct ClipMoveState {
    }
 };
 
-class TimeShiftHandle final : public UIHandle
+class AUDACITY_DLL_API TimeShiftHandle : public UIHandle
 {
    TimeShiftHandle(const TimeShiftHandle&) = delete;
    static HitTestPreview HitPreview
@@ -252,7 +269,6 @@ public:
    TimeShiftHandle &operator=(TimeShiftHandle&&) = default;
 
    bool IsGripHit() const { return mGripHit; }
-   std::shared_ptr<Track> GetTrack() const = delete;
 
    // Try to move clips from one track to another, before also moving
    // by some horizontal amount, which may be slightly adjusted to fit the
@@ -292,6 +308,12 @@ public:
 
    bool StopsOnKeystroke() override { return true; }
 
+   bool Clicked() const;
+
+protected:
+   std::shared_ptr<Track> GetTrack() const;
+   //There were attempt to move clip/track horizontally, or to move it vertically
+   bool WasMoved() const;
 private:
    // TrackPanelDrawable implementation
    void Draw(

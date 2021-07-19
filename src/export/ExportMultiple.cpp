@@ -15,7 +15,7 @@
 
 *//********************************************************************/
 
-#include "../Audacity.h"
+
 #include "ExportMultiple.h"
 
 #include <wx/defs.h>
@@ -49,7 +49,7 @@
 #include "../WaveTrack.h"
 #include "../widgets/HelpSystem.h"
 #include "../widgets/AudacityMessageBox.h"
-#include "../widgets/ErrorDialog.h"
+#include "../widgets/AudacityTextEntryDialog.h"
 #include "../widgets/ProgressDialog.h"
 
 
@@ -574,7 +574,7 @@ void ExportMultipleDialog::OnCancel(wxCommandEvent& WXUNUSED(event))
 
 void ExportMultipleDialog::OnHelp(wxCommandEvent& WXUNUSED(event))
 {
-   HelpSystem::ShowHelp(this, wxT("Export_Multiple"), true);
+   HelpSystem::ShowHelp(this, L"Export_Multiple", true);
 }
 
 void ExportMultipleDialog::OnExport(wxCommandEvent& WXUNUSED(event))
